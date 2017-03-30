@@ -190,6 +190,150 @@ void Multigrid(double **u, double **f, double **r, double *As, double w, double 
 
 }
 
+void AsyncRestriction(double **u, double **r, double *As, int *n) {
+	
+	for (int i=2;i<n[1]-1;i=i+2) {
+		for (int j=2;j<n[0]-1;j=j+2) {
+			r[n[1]+i/2][j/2] = r[n[1]+i/2][j/2]-(As[0]*u[i-1][j]+As[1]*u[i][j-1]+As[2]*u[i][j]+As[3]*u[i][j+1]+As[4]*u[i+1][j]);
+			//f[n[1]+i/2][j/2] = r[i][j];
+		}
+	}
+}
+
+void OpAI(double *As, double *AI) {
+	
+	for (int i=0;i<5;i++) {
+ 		AI[i] = -0.5*As[i];
+	}
+	AI[2] = -AI[2];
+}
+
+void AsyncCorrection(double **u, double **r, double *AI, int *n) {
+	
+	//double Iop[3][3];
+	int    im, jm;
+
+	for (int i=2;i<n[1]-1;i=i+2) {
+		for (int j=2;j<n[0]-1;j=j+2) {
+			im = n[1]+i/2;
+			jm = j/2;
+			r[i-1][j] = r[i-1][j]-AI[0]*u[im][jm];
+			r[i][j-1] = r[i][j-1]-AI[1]*u[im][jm];
+			r[i][j] = r[i][j]-AI[2]*u[im][jm];
+			r[i][j+1] = r[i][j+1]-AI[3]*u[im][jm];
+			r[i+1][j] = r[i+1][j]-AI[4]*u[im][jm];
+			/*
+			for (int li=0;li<3;li++) {
+				for (int lj=0;lj<3;lj++) {
+			 		r[i+li-1][j+lj-1] = f[i+li-1][j+lj-1]-AI[li][lj]*u[im][jm];
+				}
+			}
+			*/
+			//if (flag==0) u[im][jm] = 0.0;
+		}
+	}
+}
+
+void AsyncRres(double **u, double **f, double **r, double *As, int *n) {
+	
+	//double temp;
+	int im, jm;
+	
+	for (int i=1;i<n[1]-1;i++) {
+		for (int j=1;j<n[0]-1;j++) {
+			
+			r[i][j] = f[i][j] - (As[0]*u[i-1][j]+As[1]*u[i][j-1]+As[3]*u[i][j+1]+As[4]*u[i+1][j]);
+
+			if ((i%2 == 0) && (j%2 == 0)) {
+				im = n[1]+i/2;
+				jm = j/2;
+				r[im][jm] = f[im][jm] - 0.25*(As[0]*u[im-1][jm]+As[1]*u[im][jm-1]+As[3]*u[im][jm+1]+As[4]*u[im+1][jm]);
+			}
+			//u[i][j] = (1-w)*u[i][j] + (w/As[2])*temp;
+			
+			//u[i][j] = u[i][j] + (w/As[2])*r[i][j];
+		}
+	}
+}
+
+void AsyncStep(double **u, double **f, double **r, double *As, double *AI, double w, int *n) {
+	
+	int im,jm;
+
+	AsyncRres(u,f,r,As,n);
+	AsyncCorrection(u,r,AI,n);
+	AsyncRestriction(u,r,As,n);
+	
+	for (int i=1;i<n[1]-1;i++) {
+		for (int j=1;j<n[0]-1;j++) {
+			
+			u[i][j] = (1-w)*u[i][j] + (w/As[2])*r[i][j];
+
+			if ((i%2 == 0) && (j%2 == 0)) {
+				im = n[1]+i/2;
+				jm = j/2;
+				u[im][jm] = (1-w)*u[im][jm] + 4.0*(w/As[2])*r[im][jm];
+			}
+			//u[i][j] = (1-w)*u[i][j] + (w/As[2])*temp;
+			
+			//u[i][j] = u[i][j] + (w/As[2])*r[i][j];
+		}
+	}
+	
+
+}
+
+double AsyncResNorm(double **u, double **r, double *As, int *n) {
+	
+	int im, jm;
+	double rnorm;
+
+	rnorm = 0.0;	
+	for (int i=1;i<n[1]-1;i++) {
+		for (int j=1;j<n[0]-1;j++) {
+			
+			r[i][j] = fabs(r[i][j] - As[2]*u[i][j]);
+			rnorm = fmax(rnorm,r[i][j]);
+
+			if ((i%2 == 0) && (j%2 == 0)) {
+				im = n[1]+i/2;
+				jm = j/2;
+				r[im][jm] = fabs(r[im][jm] - 0.25*As[2]*u[im][jm]);
+				rnorm = fmax(rnorm,r[im][jm]);
+			}
+			//u[i][j] = (1-w)*u[i][j] + (w/As[2])*temp;
+			
+			//u[i][j] = u[i][j] + (w/As[2])*r[i][j];
+		}
+	}
+	return rnorm;
+
+}
+
+void AsyncMultigrid(double **u, double **f, double **r, double *As, double w, double *rnorm, int*n, int m) {
+	
+	int i;
+	double AI[5];	
+	
+	ResidualRestriction(f,f,n); // Building f-tilda
+	OpAI(As,AI);
+
+	AsyncRres(u,f,r,As,n);
+	AsyncCorrection(u,r,AI,n);
+	AsyncRestriction(u,r,As,n);
+	rnorm[0] = AsyncResNorm(u,r,As,n);
+	
+	while (i<m && (1.0+0.5*rnorm[i])!=1.0) {
+		i = i+1;
+		AsyncStep(u,f,r,As,AI,w,n);
+		rnorm[i] = AsyncResNorm(u,r,As,n);
+		//GetResidual(*u,*f,As,shift,*r,nt);
+		//res = norm(*r,nt);
+	}
+	printf("residual = %.16e\n",rnorm[i]);
+	
+}
+
 double L2norm(double *a, int n) {
 	
 	double result;

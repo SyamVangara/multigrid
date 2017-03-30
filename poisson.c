@@ -74,7 +74,8 @@ int main() {
 	clock_t initT = clock();
 	// Solver
 	//Jacobi(u,f,r,As,weight,rnorm,numIter,n); // Weighted Jacobi
-	Multigrid(u,f,r,As,weight,rnorm,levels,n,numIter); // Multigrid V-cycle
+	//Multigrid(u,f,r,As,weight,rnorm,levels,n,numIter); // Multigrid V-cycle
+	AsyncMultigrid(u,f,r,As,weight,rnorm,n,numIter);
 
 	clock_t solverT = clock();
 	
