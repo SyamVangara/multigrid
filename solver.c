@@ -26,28 +26,27 @@ void UpdateRHS(double *A, double **u, double **r, int *n) {
 
 }
 
-double ResidualNorm(double **u, double **f, double *As, int *n) {
+double Residual(double **u, double **f, double **r, double *As, int *n) {
 
-	double res, rnorm=0.0;
-
+	double resLinf;
 //	*rnorm = 0.0;
 	//*(rnorm+1) = 0.0;
 	//*(rnorm+2) = 0.0;
 	for (int i=1;i<n[1]-1;i++) {
 		for (int j=1;j<n[0]-1;j++) {
-			res = f[i][j] - (As[0]*u[i-1][j]+As[1]*u[i][j-1]+As[2]*u[i][j]+As[3]*u[i][j+1]+As[4]*u[i+1][j]);
-			res = fabs(res);
+			r[i][j] = f[i][j] - (As[0]*u[i-1][j]+As[1]*u[i][j-1]+As[2]*u[i][j]+As[3]*u[i][j+1]+As[4]*u[i+1][j]);
+			//res = fabs(r[i][j]);
 /*
 			*rnorm = fmax(res,*rnorm);
 			*(rnorm+1) = *(rnorm+1) + res;
 			*(rnorm+2) = *(rnorm+2) + res*res;
 */
 			//rnorm = rnorm + res*res;
-			rnorm = fmax(rnorm,res);
+			resLinf = fmax(resLinf,fabs(r[i][j]));
 		}
 	}
 	//rnorm = sqrt(rnorm);
-	return rnorm;
+	return resLinf;
 }
 
 void JacobiStep(double **u, double **f, double *As, double w, int *n) {
@@ -56,21 +55,23 @@ void JacobiStep(double **u, double **f, double *As, double w, int *n) {
 	
 	for (int i=1;i<n[1]-1;i++) {
 		for (int j=1;j<n[0]-1;j++) {
+			
 			temp = f[i][j] - (As[0]*u[i-1][j]+As[1]*u[i][j-1]+As[3]*u[i][j+1]+As[4]*u[i+1][j]);
 			u[i][j] = (1-w)*u[i][j] + (w/As[2])*temp;
+			
+			//u[i][j] = u[i][j] + (w/As[2])*r[i][j];
 		}
 	}
 }
 
-void Jacobi(double **u, double **f, double *As, double w, double *rnorm, int v,int *n) {
+void Jacobi(double **u, double **f, double **r, double *As, double w, double *rnorm, int v,int *n) {
 	
 	int i=0;
-
-	rnorm[0] = ResidualNorm(u,f,As,n);
+	rnorm[0] = Residual(u,f,r,As,n);
 	while (i<v && (1.0+0.5*rnorm[i])!=1.0) {
 		i = i+1;
 		JacobiStep(u,f,As,w,n);
-		rnorm[i] = ResidualNorm(u,f,As,n);
+		rnorm[i] = Residual(u,f,r,As,n);
 		//GetResidual(*u,*f,As,shift,*r,nt);
 		//res = norm(*r,nt);
 	}
@@ -78,16 +79,19 @@ void Jacobi(double **u, double **f, double *As, double w, double *rnorm, int v,i
 
 }
 
-void ResidualRestriction(double **u, double **f, double *As, int *n) {
+void ResidualRestriction(double **f, double **r, int *n) {
 	
 	for (int i=2;i<n[1]-1;i=i+2) {
-		for (int j=2;j<n[0]-1;j=j+2) {	
+		for (int j=2;j<n[0]-1;j=j+2) {
+			/*	
 			f[n[1]+i/2][j/2] = f[i][j]-(As[0]*u[i-1][j]+As[1]*u[i][j-1]+As[2]*u[i][j]+As[3]*u[i][j+1]+As[4]*u[i+1][j]);
+			*/
+			f[n[1]+i/2][j/2] = r[i][j];
 		}
 	}
 }
 
-void ErrorCorrection(double **u, int *n) {
+void ErrorCorrection(double **u, int *n, int flag) {
 	
 	double Iop[3][3];
 	int    im, jm;
@@ -106,32 +110,37 @@ void ErrorCorrection(double **u, int *n) {
 			 		u[i+li-1][j+lj-1] = u[i+li-1][j+lj-1]+Iop[li][lj]*u[im][jm];
 				}
 			}
-			u[im][jm] = 0.0;
+			if (flag==0) u[im][jm] = 0.0;
 		}
 	}
 }
 
-void SweepAndRestrict(double **u, double **f, double *As, double w, int v,int *n) {
-
+void SweepAndRestrict(double **u, double **f, double **r, double *As, double w, int v,int *n) {
+	
+	double tempRes;
 	for (int i=0;i<v;i++) {
+		//JacobiStep(u,f,As,w,n);
+		//tempRes = Residual(u,f,r,As,n);
 		JacobiStep(u,f,As,w,n);
 	}
-	ResidualRestriction(u,f,As,n);
+	tempRes = Residual(u,f,r,As,n);
+	ResidualRestriction(f,r,n);
 }
 
 void CorrectAndSweep(double **u, double **f, double *As, double w, int v,int *n) {
-
-	ErrorCorrection(u,n);
-
+	
+	//double tempRes;
+	ErrorCorrection(u,n,0);
 	for (int i=0;i<v;i++) {
+		//tempRes = Residual(u,f,r,As,n);
 		JacobiStep(u,f,As,w,n);
 	}
 
 }
 
-void Vcycle(double **u, double **f, double *As, double w, int *v,int levels,int *n) {
+void Vcycle(double **u, double **f, double **r, double *As, double w, int *v,int levels,int *n) {
 	
-	double AsH[levels][5];
+	double AsH[levels][5];//, res;
 	int    nH[levels][2], nid[levels];
 	
 	for (int j=0;j<5;j++) {
@@ -151,10 +160,11 @@ void Vcycle(double **u, double **f, double *As, double w, int *v,int levels,int 
 	}
 	
 	for (int i=0;i<levels-1;i++) {
-		SweepAndRestrict((u+nid[i]),(f+nid[i]),AsH[i],w,v[0],nH[i]);
+		SweepAndRestrict((u+nid[i]),(f+nid[i]),(r+nid[i]),AsH[i],w,v[0],nH[i]);
 	}
 	
 	for (int i=0;i<v[1];i++) {
+		//res = Residual((u+nid[levels-1]),(f+nid[levels-1]),(r+nid[levels-1]),AsH[levels-1],nH[levels-1]);
 		JacobiStep((u+nid[levels-1]),(f+nid[levels-1]),AsH[levels-1],w,nH[levels-1]);
 	}
 	for (int i=levels-2;i>=0;i=i-1) {
@@ -162,7 +172,7 @@ void Vcycle(double **u, double **f, double *As, double w, int *v,int levels,int 
 	}
 }
 
-void Multigrid(double **u, double **f, double *As, double w, double *rnorm, int levels, int *n,int m) {
+void Multigrid(double **u, double **f, double **r, double *As, double w, double *rnorm, int levels, int *n,int m) {
 
 	int v[2];
 
@@ -171,16 +181,16 @@ void Multigrid(double **u, double **f, double *As, double w, double *rnorm, int 
 	//printf("Enter the number of coarse grid sweeps = ");
 	scanf("%d",v+1);
 	
-	rnorm[0] = ResidualNorm(u,f,As,n);
+	rnorm[0] = Residual(u,f,r,As,n);
 	for (int i=1;i<m+1;i++) {
-		Vcycle(u,f,As,w,v,levels,n);
-		rnorm[i]= ResidualNorm(u,f,As,n);
+		Vcycle(u,f,r,As,w,v,levels,n);
+		rnorm[i] = Residual(u,f,r,As,n); 
 	}
 	printf("residual = %.16e\n",rnorm[m]);
 
 }
 
-double norm(double *a, int n) {
+double L2norm(double *a, int n) {
 	
 	double result;
 	result = a[0]*a[0];
@@ -188,6 +198,26 @@ double norm(double *a, int n) {
 		result = result + a[i]*a[i];
 	}
 	return sqrt(result);
+}
+
+double L1Norm(double *a, int n) {
+	
+	double result;
+	result = fabs(a[0]);
+	for (int i=1;i<n;i++) {
+		result = result + fabs(a[i]);
+	}
+	return result;
+}
+
+double LiNorm(double *a, int n) {
+	
+	double result;
+	result = fabs(a[0]);
+	for (int i=1;i<n;i++) {
+		result = fmax(result,fabs(a[i]));
+	}
+	return result;
 }
 
 void Initialization(double **u, int *n) {
