@@ -208,9 +208,30 @@ void OpAI(double *As, double *AI) {
 	AI[2] = -AI[2];
 }
 
-void AsyncCorrection(double **u, double **r, double *AI, int *n) {
+void AsyncCorrection(double **u, double **r, double *As, int *n, int flag) {
 	
 	//double Iop[3][3];
+	double Iop[3][3];
+	int    im, jm;
+
+	for (int lj=0;lj<3;lj++) {
+ 		Iop[0][lj]= 0.5 - 0.25*fabs(1-lj);
+ 		Iop[1][lj]= 1.0 - 0.5*fabs(1-lj);
+ 		Iop[2][lj]= 0.5 - 0.25*fabs(1-lj);
+	}
+	for (int i=2;i<n[1]-1;i=i+2) {
+		for (int j=2;j<n[0]-1;j=j+2) {
+			im = n[1]+i/2;
+			jm = j/2;
+			for (int li=0;li<3;li++) {
+				for (int lj=0;lj<3;lj++) {
+			 		r[i+li-1][j+lj-1] = Iop[li][lj]*u[im][jm];
+				}
+			}
+			if (flag==0) u[im][jm] = 0.0;
+		}
+	}
+/*
 	int    im, jm;
 
 	for (int i=2;i<n[1]-1;i=i+2) {
@@ -222,16 +243,17 @@ void AsyncCorrection(double **u, double **r, double *AI, int *n) {
 			r[i][j] = r[i][j]-AI[2]*u[im][jm];
 			r[i][j+1] = r[i][j+1]-AI[3]*u[im][jm];
 			r[i+1][j] = r[i+1][j]-AI[4]*u[im][jm];
-			/*
-			for (int li=0;li<3;li++) {
-				for (int lj=0;lj<3;lj++) {
-			 		r[i+li-1][j+lj-1] = f[i+li-1][j+lj-1]-AI[li][lj]*u[im][jm];
-				}
-			}
-			*/
+			
+			//for (int li=0;li<3;li++) {
+			//	for (int lj=0;lj<3;lj++) {
+			// 		r[i+li-1][j+lj-1] = f[i+li-1][j+lj-1]-AI[li][lj]*u[im][jm];
+			//	}
+			//}
+			
 			//if (flag==0) u[im][jm] = 0.0;
 		}
 	}
+*/
 }
 
 void AsyncRres(double **u, double **f, double **r, double *As, int *n) {
@@ -256,12 +278,36 @@ void AsyncRres(double **u, double **f, double **r, double *As, int *n) {
 	}
 }
 
+void Copy(double **u, double **r, int *n) {
+	
+	//double temp;
+	int im, jm;
+	
+	for (int i=1;i<n[1]-1;i++) {
+		for (int j=1;j<n[0]-1;j++) {
+			
+			r[i][j] = u[i][j];
+
+			if ((i%2 == 0) && (j%2 == 0)) {
+				im = n[1]+i/2;
+				jm = j/2;
+				r[im][jm] = u[im][jm];
+			}
+			//u[i][j] = (1-w)*u[i][j] + (w/As[2])*temp;
+			
+			//u[i][j] = u[i][j] + (w/As[2])*r[i][j];
+		}
+	}
+}
+
 void AsyncStep(double **u, double **f, double **r, double *As, double *AI, double w, int *n) {
 	
 	int im,jm;
-
+	
+	Copy(u,r,n);
+	ErrorCorrection(r,n,1);
 	AsyncRres(u,f,r,As,n);
-	AsyncCorrection(u,r,AI,n);
+	//AsyncCorrection(u,r,AI,n);
 	AsyncRestriction(u,r,As,n);
 	
 	for (int i=1;i<n[1]-1;i++) {

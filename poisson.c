@@ -41,7 +41,7 @@ int main() {
 	
 	clock_t begin = clock();
 
-	for (int i=1;i<DIMENSION;i++) {
+	for (int i=1;i<DIMENSION;i++) { 
 		n[i]  = n[0];      // No. of points in each dimension
 	}
 	for (int i=0;i<DIMENSION;i++) {
