@@ -48,7 +48,6 @@ int main() {
 		bounds[i*2] = 0.0;    // Lower bound in each dimension
 		bounds[i*2+1] = 1.0;  // Upper bound in each dimension
 	}
-
 	
 	// Memory allocation of RHS, solution and residual
 	//ierr = JacobiMalloc(&f,&u,&r,n); CHKERR_PRNT("malloc failed");
@@ -75,7 +74,8 @@ int main() {
 	// Solver
 	//Jacobi(u,f,r,As,weight,rnorm,numIter,n); // Weighted Jacobi
 	//Multigrid(u,f,r,As,weight,rnorm,levels,n,numIter); // Multigrid V-cycle
-	AsyncMultigrid(u,f,r,As,weight,rnorm,n,numIter);
+	PMultigrid(u,f,r,As,weight,rnorm,levels,n,numIter);
+	//AsyncMultigrid(u,f,r,As,weight,rnorm,n,numIter);
 
 	clock_t solverT = clock();
 	
