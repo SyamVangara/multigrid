@@ -191,6 +191,50 @@ void Multigrid(double **u, double **f, double **r, double *As, double w, double 
 
 }
 
+void Copy(double **u, double **r, int *n) {
+	
+	//double temp;
+	//int im, jm;
+	
+	for (int i=1;i<n[1]-1;i++) {
+		for (int j=1;j<n[0]-1;j++) {
+			
+			r[i][j] = u[i][j];
+/*
+			if ((i%2 == 0) && (j%2 == 0)) {
+				im = n[1]+i/2;
+				jm = j/2;
+				r[im][jm] = u[im][jm];
+			}
+			//u[i][j] = (1-w)*u[i][j] + (w/As[2])*temp;
+*/			
+			//u[i][j] = u[i][j] + (w/As[2])*r[i][j];
+		}
+	}
+}
+
+void Subtract(double **u, double **r, int *n) {
+	
+	//double temp;
+	//int im, jm;
+	
+	for (int i=1;i<n[1]-1;i++) {
+		for (int j=1;j<n[0]-1;j++) {
+			
+			u[i][j] = u[i][j] - r[i][j];
+/*
+			if ((i%2 == 0) && (j%2 == 0)) {
+				im = n[1]+i/2;
+				jm = j/2;
+				r[im][jm] = u[im][jm];
+			}
+			//u[i][j] = (1-w)*u[i][j] + (w/As[2])*temp;
+*/			
+			//u[i][j] = u[i][j] + (w/As[2])*r[i][j];
+		}
+	}
+}
+
 void Pcycle(double **u, double **f, double **r, double *As, double w,int levels,int *n) {
 	
 	double AsH[levels][5], res;
@@ -219,10 +263,17 @@ void Pcycle(double **u, double **f, double **r, double *As, double w,int levels,
 		ResidualRestriction((f+nid[i]),(r+nid[i]),nH[i]);
 		//SweepAndRestrict((u+nid[i]),(f+nid[i]),(r+nid[i]),AsH[i],w,v[0],nH[i]);
 	}
-	flag = 0;
+	for (int i=1;i<levels;i++) {
+		Copy((u+nid[i]),(r+nid[i]),nH[i]);
+	}
+	//ErrorCorrection(u+nid[levels-2],nH[levels-2],0);
+	flag = 1;
 	for (int i=levels-2;i>=0;i=i-1) {
 		ErrorCorrection(u+nid[i],nH[i],flag);
 		//CorrectAndSweep((u+nid[i]),(f+nid[i]),AsH[i],w,v[0],nH[i]);
+	}
+	for (int i=1;i<levels;i++) {
+		Subtract((u+nid[i]),(r+nid[i]),nH[i]);
 	}
 	for (int i=0;i<levels;i++) {
 		//res = Residual((u+nid[levels-1]),(f+nid[levels-1]),(r+nid[levels-1]),AsH[levels-1],nH[levels-1]);
