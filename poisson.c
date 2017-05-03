@@ -16,15 +16,16 @@ void GetError(double **coord, int *n, double **u, double *error);
 void UpdateBC(double **coord, double **u, int *n);
 void OpA(double *A, double *h);
 int ipow(int base, int exp);
-int JacobiMalloc(double ***f, double ***u, int *n);
-int MultigridMalloc(double ***f, double ***u, int *n, int levels);
+int JacobiMalloc(double ***f, double ***u, double ***r, int *n);
+int MultigridMalloc(double ***f, double ***u, double ***r, int *n, int levels);
+int AsyncMultigridMalloc(double ***f, double ***u, double ***r,int *n, int levels);
 
 int main() {
 	
 	double weight=(2.0/3.0);
 	int    n[DIMENSION], ierr=0, levels, numIter;
 	double **coord, h[DIMENSION], bounds[DIMENSION*2];
-	double **f, **u, *rnorm, error[3], As[5];// ,**r;
+	double **f, **u, **r, *rnorm, error[3], As[5];// ,**r;
 	FILE   *solData, *resData, *errData;
 	
 	freopen("poisson.in", "r", stdin);
@@ -40,18 +41,18 @@ int main() {
 	
 	clock_t begin = clock();
 
-	for (int i=1;i<DIMENSION;i++) {
+	for (int i=1;i<DIMENSION;i++) { 
 		n[i]  = n[0];      // No. of points in each dimension
 	}
 	for (int i=0;i<DIMENSION;i++) {
 		bounds[i*2] = 0.0;    // Lower bound in each dimension
 		bounds[i*2+1] = 1.0;  // Upper bound in each dimension
 	}
-
 	
 	// Memory allocation of RHS, solution and residual
-	//ierr = JacobiMalloc(&f,&u,n); CHKERR_PRNT("malloc failed");
-	ierr = MultigridMalloc(&f,&u,n,levels); CHKERR_PRNT("malloc failed");
+	//ierr = JacobiMalloc(&f,&u,&r,n); CHKERR_PRNT("malloc failed");
+	ierr = MultigridMalloc(&f,&u,&r,n,levels); CHKERR_PRNT("malloc failed");
+	//ierr = AsyncMultigridMalloc(&f,&u,&r,n,levels); CHKERR_PRNT("malloc failed");
 	rnorm = (double *)malloc((numIter+1)*sizeof(double));if (rnorm==NULL) ERROR_MSG("malloc failed");
 
 	clock_t memT = clock();
@@ -71,10 +72,10 @@ int main() {
 	
 	clock_t initT = clock();
 	// Solver
-	//Jacobi(u,f,As,weight,rnorm,numIter,n); // Weighted Jacobi
-	
-	// Multigrid V-cycle
-	Multigrid(u,f,As,weight,rnorm,levels,n,numIter);
+	//Jacobi(u,f,r,As,weight,rnorm,numIter,n); // Weighted Jacobi
+	//Multigrid(u,f,r,As,weight,rnorm,levels,n,numIter); // Multigrid V-cycle
+	PMultigrid(u,f,r,As,weight,rnorm,levels,n,numIter);
+	//AsyncMultigrid(u,f,r,As,weight,rnorm,n,numIter);
 
 	clock_t solverT = clock();
 	
@@ -200,24 +201,26 @@ int ipow(int base, int exp) {
 	return result;
 }
 
-int JacobiMalloc(double ***f, double ***u, int *n) {
+int JacobiMalloc(double ***f, double ***u, double ***r, int *n) {
 	
 	int ierr = 0;
 
 	ierr = malloc2d(f,n[1],n[0]); CHKERR_RETURN("malloc failed");
 	ierr = malloc2d(u,n[1],n[0]); CHKERR_RETURN("malloc failed");
+	ierr = malloc2d(r,n[1],n[0]); CHKERR_RETURN("malloc failed");
 	
 	for (int i=0;i<n[1];i++) {
 		for (int j=0;j<n[0];j++) {
 			(*u)[i][j] = 0.0;
 			(*f)[i][j] = 0.0;	
+			(*r)[i][j] = 0.0;	
 		}
 	}
 
 	return ierr;
 }
 
-int MultigridMalloc(double ***f, double ***u, int *n, int levels) {
+int MultigridMalloc(double ***f, double ***u, double ***r, int *n, int levels) {
 	
 	int TotalRows, n1, n0, *m, k, ierr = 0;
 
@@ -235,15 +238,47 @@ int MultigridMalloc(double ***f, double ***u, int *n, int levels) {
 	
 	ierr = malloc2dY(f,TotalRows,m); CHKERR_RETURN("malloc failed");
 	ierr = malloc2dY(u,TotalRows,m); CHKERR_RETURN("malloc failed");
+	ierr = malloc2dY(r,TotalRows,m); CHKERR_RETURN("malloc failed");
 	
 	for (int i=0;i<TotalRows;i++) {
 		for (int j=0;j<m[i];j++) {
 			(*u)[i][j] = 0.0;
 			(*f)[i][j] = 0.0;	
+			(*r)[i][j] = 0.0;	
 		}
 	}
 	free(m);
 	return ierr;
 }
 
+int AsyncMultigridMalloc(double ***f, double ***u, double ***r,int *n, int levels) {
+	
+	int TotalRows, n1, n0, *m, k, ierr = 0;
+
+	TotalRows = (2*(n[1]-1)*(ipow(2,levels)-1))/(ipow(2,levels))+levels;
+	m = (int *)malloc(TotalRows*sizeof(int)); if (m==NULL) ERROR_RETURN("malloc failed"); 
+	k = 0;
+	for (int i=0;i<levels;i++) {
+		n1 = (n[1]+ipow(2,i)-1)/(ipow(2,i));
+		n0 = (n[0]+ipow(2,i)-1)/(ipow(2,i));
+		for (int j=0;j<n1;j++) {
+			m[k] = n0;
+			k = k+1;
+		}
+	}
+	
+	ierr = malloc2dY(f,TotalRows,m); CHKERR_RETURN("malloc failed");
+	ierr = malloc2dY(u,TotalRows,m); CHKERR_RETURN("malloc failed");
+	ierr = malloc2dY(r,TotalRows,m); CHKERR_RETURN("malloc failed");
+	
+	for (int i=0;i<TotalRows;i++) {
+		for (int j=0;j<m[i];j++) {
+			(*u)[i][j] = 0.0;
+			(*f)[i][j] = 0.0;	
+			(*r)[i][j] = 0.0;	
+		}
+	}
+	free(m);
+	return ierr;
+}
 
