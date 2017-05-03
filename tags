@@ -1,0 +1,65 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.9~svn20110310	//
+AsyncCorrection	solver.c	/^void AsyncCorrection(double **u, double **r, double *As, int *n, int flag) {$/;"	f
+AsyncMultigrid	solver.c	/^void AsyncMultigrid(double **u, double **f, double **r, double *As, double w, double *rnorm, int*n, int m) {$/;"	f
+AsyncMultigridMalloc	poisson.c	/^int AsyncMultigridMalloc(double ***f, double ***u, double ***r,int *n, int levels) {$/;"	f
+AsyncResNorm	solver.c	/^double AsyncResNorm(double **u, double **r, double *As, int *n) {$/;"	f
+AsyncRestriction	solver.c	/^void AsyncRestriction(double **u, double **r, double *As, int *n) {$/;"	f
+AsyncRres	solver.c	/^void AsyncRres(double **u, double **f, double **r, double *As, int *n) {$/;"	f
+AsyncStep	solver.c	/^void AsyncStep(double **u, double **f, double **r, double *As, double *AI, double w, int *n) {$/;"	f
+BIN	makefile	/^BIN = poisson$/;"	m
+CC	makefile	/^CC = gcc$/;"	m
+CFLAGS	makefile	/^CFLAGS  = -Wall -std=c99$/;"	m
+CHKERR_PRNT	mesh.c	5;"	d	file:
+CHKERR_PRNT	poisson.c	6;"	d	file:
+CHKERR_RETURN	mesh.c	6;"	d	file:
+CHKERR_RETURN	poisson.c	7;"	d	file:
+Copy	solver.c	/^void Copy(double **u, double **r, int *n) {$/;"	f
+CorrectAndSweep	solver.c	/^void CorrectAndSweep(double **u, double **f, double *As, double w, int v,int *n) {$/;"	f
+DEFS	makefile	/^DEFS = -DDEBUG_FLAG -DEXPERIMENTAL=0$/;"	m
+DEP	makefile	/^DEP = header.h$/;"	m
+DIMENSION	poisson.c	10;"	d	file:
+ERROR_MSG	mesh.c	3;"	d	file:
+ERROR_MSG	poisson.c	4;"	d	file:
+ERROR_RETURN	mesh.c	4;"	d	file:
+ERROR_RETURN	poisson.c	5;"	d	file:
+ErrorCorrection	solver.c	/^void ErrorCorrection(double **u, int *n, int flag) {$/;"	f
+FUNC	poisson.c	11;"	d	file:
+GetError	poisson.c	/^void GetError(double **coord, int *n, double **u, double *error) {$/;"	f
+GetFuncValues2d	poisson.c	/^void GetFuncValues2d(double **coord, int *n, double **f) {$/;"	f
+Initialization	solver.c	/^void Initialization(double **u, int *n) {$/;"	f
+Jacobi	solver.c	/^void Jacobi(double **u, double **f, double **r, double *As, double w, double *rnorm, int v,int *n) {$/;"	f
+JacobiMalloc	poisson.c	/^int JacobiMalloc(double ***f, double ***u, double ***r, int *n) {$/;"	f
+JacobiStep	solver.c	/^void JacobiStep(double **u, double **f, double *As, double w, int *n) {$/;"	f
+L1Norm	solver.c	/^double L1Norm(double *a, int n) {$/;"	f
+L2norm	solver.c	/^double L2norm(double *a, int n) {$/;"	f
+LIBS	makefile	/^LIBS = -lm$/;"	m
+LiNorm	solver.c	/^double LiNorm(double *a, int n) {$/;"	f
+Multigrid	solver.c	/^void Multigrid(double **u, double **f, double **r, double *As, double w, double *rnorm, int levels, int *n,int m) {$/;"	f
+MultigridMalloc	poisson.c	/^int MultigridMalloc(double ***f, double ***u, double ***r, int *n, int levels) {$/;"	f
+OBJS	makefile	/^OBJS = solver.o mesh.o array.o$/;"	m
+OpA	poisson.c	/^void OpA(double *A, double *h) {$/;"	f
+OpAI	solver.c	/^void OpAI(double *As, double *AI) {$/;"	f
+PI	poisson.c	9;"	d	file:
+Residual	solver.c	/^double Residual(double **u, double **f, double **r, double *As, int *n) {$/;"	f
+ResidualRestriction	solver.c	/^void ResidualRestriction(double **f, double **r, int *n) {$/;"	f
+SOL	poisson.c	12;"	d	file:
+SUM_ARRAY	array.c	3;"	d	file:
+SweepAndRestrict	solver.c	/^void SweepAndRestrict(double **u, double **f, double **r, double *As, double w, int v,int *n) {$/;"	f
+UniformMesh	mesh.c	/^int UniformMesh(double ***pcoord, int *n, double *bounds, double *h, int dimension) {$/;"	f
+UpdateBC	poisson.c	/^void UpdateBC(double **coord, double **u, int *n) {$/;"	f
+UpdateRHS	solver.c	/^void UpdateRHS(double *A, double **u, double **r, int *n) {$/;"	f
+Vcycle	solver.c	/^void Vcycle(double **u, double **f, double **r, double *As, double w, int *v,int levels,int *n) {$/;"	f
+_ARRAY_H_	array.h	8;"	d
+_HEADER_H_	header.h	6;"	d
+_MESH_H_	mesh.h	6;"	d
+_SOLVER_H_	solver.h	6;"	d
+free2dArray	array.c	/^void free2dArray(double ***a) {$/;"	f
+ipow	poisson.c	/^int ipow(int base, int exp) {$/;"	f
+main	poisson.c	/^int main() {$/;"	f
+malloc2d	array.c	/^int malloc2d(double ***a, int n, int m) {$/;"	f
+malloc2dY	array.c	/^int malloc2dY(double ***a, int n, int *m) {$/;"	f
