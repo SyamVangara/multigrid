@@ -280,6 +280,60 @@ void Pcycle(double **u, double **f, double **r, double *As, double w,int levels,
 		JacobiStep((u+nid[i]),(f+nid[i]),AsH[i],w,nH[i]);
 	}
 }
+void PcyclePartial(double **u, double **f, double **r, double *As, double w,int levels,int *n) {
+	
+	double AsH[levels][5], res;
+	int    nH[levels][2], nid[levels], flag;
+	
+	for (int j=0;j<5;j++) {
+		AsH[0][j] = As[j];
+	}
+	
+	nH[0][0] = n[0];
+	nH[0][1] = n[1];
+	nid[0] = 0;
+	for (int i=1;i<levels;i++) {
+		for (int j=0;j<5;j++) {
+			AsH[i][j] = 0.25*AsH[i-1][j];
+		}
+		nH[i][0] = (nH[i-1][0]+1)/2;
+		nH[i][1] = (nH[i-1][1]+1)/2;
+		nid[i] = nid[i-1] + nH[i-1][1];
+	}
+	
+	//res = Residual(u,f,r,As,n);
+	//ResidualRestriction(f,r,n);
+	SweepAndRestrict(u,f,r,As,w,3,n);
+	for (int i=1;i<levels-1;i++) {
+		Initialization((u+nid[i]), nH[i]);
+		//SweepAndRestrict((u+nid[i]),(f+nid[i]),(r+nid[i]),AsH[i],w,v[0],nH[i]);
+	}
+	for (int m=0;m<10;m++) {
+	for (int i=1;i<levels-1;i++) {
+		res = Residual((u+nid[i]),(f+nid[i]),(r+nid[i]),AsH[i],nH[i]);
+		ResidualRestriction((f+nid[i]),(r+nid[i]),nH[i]);
+		//SweepAndRestrict((u+nid[i]),(f+nid[i]),(r+nid[i]),AsH[i],w,v[0],nH[i]);
+	}
+	for (int i=1;i<levels;i++) {
+		Copy((u+nid[i]),(r+nid[i]),nH[i]);
+	}
+	//ErrorCorrection(u+nid[levels-2],nH[levels-2],0);
+	flag = 1;
+	for (int i=levels-2;i>0;i=i-1) {
+		ErrorCorrection(u+nid[i],nH[i],flag);
+		//CorrectAndSweep((u+nid[i]),(f+nid[i]),AsH[i],w,v[0],nH[i]);
+	}
+	for (int i=1;i<levels;i++) {
+		Subtract((u+nid[i]),(r+nid[i]),nH[i]);
+	}
+	for (int i=1;i<levels;i++) {
+		//res = Residual((u+nid[levels-1]),(f+nid[levels-1]),(r+nid[levels-1]),AsH[levels-1],nH[levels-1]);
+		JacobiStep((u+nid[i]),(f+nid[i]),AsH[i],w,nH[i]);
+	}
+	}
+	CorrectAndSweep(u,f,As,w,3,n);
+}
+
 void PMultigrid(double **u, double **f, double **r, double *As, double w, double *rnorm, int levels, int*n, int m) {
 	
 	int i, flag;
@@ -297,7 +351,8 @@ void PMultigrid(double **u, double **f, double **r, double *As, double w, double
 	rnorm[i] = Residual(u,f,r,As,n);
 	while (i<m && (1.0+0.5*rnorm[i])!=1.0) {
 		i = i+1;
-		Pcycle(u,f,r,As,w,levels,n);
+		//Pcycle(u,f,r,As,w,levels,n);
+		PcyclePartial(u,f,r,As,w,levels,n);
 		rnorm[i] = Residual(u,f,r,As,n);
 		//GetResidual(*u,*f,As,shift,*r,nt);
 		//res = norm(*r,nt);
